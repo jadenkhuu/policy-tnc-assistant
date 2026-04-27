@@ -68,28 +68,16 @@ policy-assistant/
 
 ---
 
-### Backend
+### One-time setup
 
-#### 1. Create and activate a virtual environment
+#### Backend
 
 ```bash
 cd backend
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate      # Mac/Linux
 # .venv\Scripts\activate       # Windows
-```
-
-Your terminal prompt will show `(.venv)` when active. Re-activate whenever you open a new terminal.
-
-#### 2. Install dependencies
-
-```bash
 pip install -r requirements.txt
-```
-
-#### 3. Configure environment
-
-```bash
 cp .env.example .env
 ```
 
@@ -100,9 +88,7 @@ ANTHROPIC_API_KEY=your-api-key-here
 CORPUS_PATH=./data/corpus        # optional — defaults to ./data/corpus
 ```
 
-#### 4. Ingest the corpus
-
-Run once (and again any time policy files are added or updated):
+Ingest the corpus (re-run any time policy files are added or updated):
 
 ```bash
 python ingest.py
@@ -110,35 +96,39 @@ python ingest.py
 
 This reads all `.md` files in `data/corpus/`, chunks them by heading, embeds each chunk, and writes `data/index/faiss.index` + `data/index/chunks.json`.
 
-#### 5. Start the backend
-
-```bash
-python app.py
-# Listening on http://localhost:5050
-```
-
----
-
-### Frontend
-
-#### 1. Install dependencies
+#### Frontend
 
 ```bash
 cd frontend
 npm install
 ```
 
-#### 2. Configure API URL (optional)
-
-By default the frontend talks to `http://localhost:5050`. To point at a different backend, create `frontend/.env.local`:
+To point at a different backend (default is `http://localhost:5050`), create `frontend/.env.local`:
 
 ```env
 VITE_API_URL=http://your-backend-host:5050
 ```
 
-#### 3. Start the dev server
+---
+
+### Daily use
+
+Open two terminals from the project root:
+
+**Terminal 1 — backend**
 
 ```bash
+cd backend
+source .venv/bin/activate      # Mac/Linux
+# .venv\Scripts\activate       # Windows
+python app.py
+# Listening on http://localhost:5050
+```
+
+**Terminal 2 — frontend**
+
+```bash
+cd frontend
 npm run dev
 # http://localhost:5173
 ```

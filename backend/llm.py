@@ -30,24 +30,36 @@ _ANSWER_TOOL = {
                 "type": "string",
                 "description": (
                     "Concise answer in 2–4 sentences, based only on the provided chunks. "
-                    "Add inline citation markers like (1) or (2) immediately after each claim, "
-                    "where the number matches the 1-based index of the source in the citations array. "
+                    "Add inline citation markers like (1) or (2) immediately after each claim. "
+                    "Number them sequentially in order of first appearance: the first new source you cite = (1), "
+                    "second new source = (2), etc. Each number must match the 1-based position of that "
+                    "source in the citations array. "
                     "Example: 'Returns must be within 30 days (1) and include the original receipt (2).' "
                     "If chunks are insufficient, state that clearly and advise the agent "
-                    "to check with a supervisor."
+                    "to check with a supervisor — omit citations entirely in that case."
                 ),
             },
             "citations": {
                 "type": "array",
-                "description": "Every policy source used in the answer.",
+                "description": (
+                    "Sources cited in the answer, in the order they are first cited. "
+                    "citations[0] = source (1), citations[1] = source (2), etc."
+                ),
                 "items": {
                     "type": "object",
                     "properties": {
-                        "title":   {"type": "string", "description": "Document title"},
-                        "section": {"type": "string", "description": "Heading path"},
-                        "url":     {"type": "string", "description": "Source URL or empty string"},
+                        "chunk_index": {
+                            "type": "integer",
+                            "description": (
+                                "The [N] number of the context chunk this citation draws from (1-based). "
+                                "Must exactly match one of the [1], [2], ... numbers in the provided policy context."
+                            ),
+                        },
+                        "title":   {"type": "string", "description": "Document title from the chunk's Source line"},
+                        "section": {"type": "string", "description": "Heading path from the chunk"},
+                        "url":     {"type": "string", "description": "Source URL from the chunk, or empty string"},
                     },
-                    "required": ["title", "section", "url"],
+                    "required": ["chunk_index", "title", "section", "url"],
                 },
             },
         },
@@ -63,8 +75,12 @@ company policies accurately and concisely.
 Rules:
 1. Answer ONLY from the policy chunks provided. Do not use outside knowledge.
 2. Add inline citation markers — (1), (2), etc. — immediately after each factual claim. \
-The number must match the 1-based position of that source in the citations array you return. \
-Example: "The change-of-mind window is 14 days (1) and proof of purchase is required (2)."
+Number them sequentially in order of first appearance: the first new context chunk you cite \
+becomes (1), the next new chunk (2), and so on. Each number must match the 1-based index of \
+that source in the citations array. In citations, set chunk_index to the [N] number of the \
+context chunk (e.g. chunk_index: 3 if you drew from [3]). \
+Example: "The change-of-mind window is 14 days (1) and proof of purchase is required (2)." \
+If no chunks support a claim, omit the citation — never invent one.
 3. Keep answers to 2–4 sentences — agents are in live chat with customers.
 4. If the provided chunks do not contain enough information to answer the question, \
 say so explicitly and tell the agent to check with a supervisor.
@@ -143,4 +159,20 @@ def answer(query: str, chunks: list[dict]) -> dict:
 
     # Extract the tool_use block — guaranteed present due to tool_choice
     tool_block = next(b for b in response.content if b.type == "tool_use")
-    return tool_block.input  # already a dict matching our schema
+    result = tool_block.input
+
+    # Override citation metadata from actual retrieved chunks so hallucinated
+    # titles/sections/urls are impossible — chunk_index is the ground truth.
+    validated = []
+    for citation in result.get("citations", []):
+        idx = citation.get("chunk_index", 0) - 1  # convert to 0-based
+        if 0 <= idx < len(chunks):
+            chunk = chunks[idx]
+            validated.append({
+                "chunk_index": idx + 1,
+                "title": chunk["title"],
+                "section": chunk["heading_path"],
+                "url": chunk.get("url", ""),
+            })
+    result["citations"] = validated
+    return result

@@ -108,10 +108,10 @@ export default function App() {
     <div className="app">
       <section className="hero">
         <div className="hero-inner">
-          <p className="hero-eyebrow">Internal Tool</p>
+          <p className="hero-eyebrow">Internal Use Only</p>
           <h1 className="hero-title">Bing Lee: Policies and T&amp;Cs Helper</h1>
           <p className="hero-subtitle">
-            Ask any question about Bing Lee policies and get instant, cited answers to help your customers.
+            Ask any question about Bing Lee policies or T&Cs and get answers with cited sources from the Bing Lee website.
           </p>
           <p className="hero-disclaimer">
             Policy information is sourced exclusively from Bing Lee's public website — no internal systems, customer data, or POS infrastructure.
